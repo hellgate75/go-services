@@ -41,3 +41,4 @@ func (d *mySQLDriver) Connect(config database.DbConfig) (database.Connection, er
 func GetMySqlDriver() database.Driver {
 	return &mySQLDriver{}
 }
+

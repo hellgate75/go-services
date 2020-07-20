@@ -26,15 +26,15 @@ Base components are :
 
 ### MySQL
 
-Instance will is provided by `database.NewDatabase` it accepts a configuration structure
-with the driver `mysql`.
+Instance will is provided by `GetDatabaseDriver` or `GetDatabaseDriverByName`, it accepts the database.MySQLDriver
+variable or with the driver name `mysql`.
 
 
 
 ### MongoDB
 
-Instance will is provided by `database.NewDatabase` it accepts a configuration structure
-with the driver `mongodb`.
+Instance will is provided by `GetDatabaseDriver` or `GetDatabaseDriverByName`, it accepts the database.MongoDbDriver
+variable or with the driver name `mongodb`.
 
 
 ### Get the library

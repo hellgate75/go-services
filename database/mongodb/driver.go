@@ -87,7 +87,7 @@ func (md *mongoDriver) Connect(config database.DbConfig) (database.Connection, e
 		return nil, err
 	}
 	var conn = mongoConnection{
-		Valid:         (client != nil),
+		Valid:         client != nil,
 		Client:        client,
 		Context:       &ctx,
 		Cancel:        cancel,

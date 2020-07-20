@@ -1,10 +1,6 @@
 package database
 
 import (
-	"errors"
-	"fmt"
-	"github.com/hellgate75/go-services/database/mongodb"
-	"github.com/hellgate75/go-services/database/mysql"
 	"reflect"
 	"strings"
 )
@@ -43,7 +39,7 @@ const (
 	MySQLDriver
 )
 
-func driverToType(driver string) DriverType {
+func DriverToType(driver string) DriverType {
 	switch strings.ToLower(driver) {
 	case "mongo", "mongo-db", "mongodb":
 		return MongoDbDriver
@@ -200,16 +196,3 @@ type Driver interface {
 	Connect(config DbConfig) (Connection, error)
 }
 
-func NewDatabase(config DbConfig) (*Driver, error) {
-	dType := driverToType(config.Driver)
-	switch dType {
-	case MongoDbDriver:
-		d := mongodb.GetMongoDriver()
-		return &d, nil
-	case MySQLDriver:
-		d := mysql.GetMySqlDriver()
-		return &d, nil
-	default:
-		return nil, errors.New(fmt.Sprintf("Unknown driver: %s", config.Driver))
-	}
-}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hellgate75/go-services/database"
 	"github.com/hellgate75/go-services/database/mongodb"
+	"github.com/hellgate75/go-services/database/mysql"
 	"strings"
 )
 
@@ -25,6 +26,21 @@ func GetDatabaseDriver(dType database.DriverType) (database.Driver, error) {
 	switch dType {
 	case database.MongoDbDriver:
 		return mongodb.GetMongoDriver(), nil
+	case database.MySQLDriver:
+		return mysql.GetMySqlDriver(), nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Unknown Database Driver type: %v", dType))
+	}
+}
+
+// You can request database using the driver name: mysql, mongodb
+func GetDatabaseDriverByName(driverName string) (database.Driver, error) {
+	var dType = database.DriverToType(driverName)
+	switch dType {
+	case database.MongoDbDriver:
+		return mongodb.GetMongoDriver(), nil
+	case database.MySQLDriver:
+		return mysql.GetMySqlDriver(), nil
 	default:
 		return nil, errors.New(fmt.Sprintf("Unknown Database Driver type: %v", dType))
 	}

@@ -166,7 +166,7 @@ func convertRawValue(value bson.RawValue) interface{} {
 
 }
 
-func (conn *mongoConnection) Insert(dbRef database.DataRef, fields []database.Field, values []database.Value, withAnd bool) error {
+func (conn *mongoConnection) Insert(dbRef database.DataRef, fields []database.Field, values []database.Value) error {
 	if !conn.Valid || conn.Client == nil {
 		return errors.New("Connection is closed or invalid")
 	}
@@ -224,7 +224,7 @@ func (conn *mongoConnection) Update(dbRef database.DataRef, conditions []databas
 	return int64(len(values)), err
 }
 
-func (conn *mongoConnection) Delete(dbRef database.DataRef, conditions []database.Condition) (int64, error) {
+func (conn *mongoConnection) Delete(dbRef database.DataRef, conditions []database.Condition, withAnd bool) (int64, error) {
 	if !conn.Valid || conn.Client == nil {
 		return 0, errors.New("Connection is closed or invalid")
 	}
