@@ -1,5 +1,5 @@
 <p align="right">
- <img src="https://github.com/hellgate75/go-services/workflows/Go/badge.svg?branch=master"></img>
+ <img src="https://travis-ci.com/hellgate75/go-services.svg?branch=master"></img>
 &nbsp;&nbsp;<img src="https://api.travis-ci.com/hellgate75/go-services.svg?branch=master" alt="trevis-ci" width="98" height="20" />&nbsp;&nbsp;<a href="https://travis-ci.com/hellgate75/go-services">Check last build on Travis-CI</a>
  </p>
 

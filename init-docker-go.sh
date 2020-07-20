@@ -30,4 +30,5 @@ echo "Testing project into folder:$PROJECT_FOLDER"
 go test -v ./...
 OUT_FILE_NAME="$PROJECT_NAME-$(uname -o|awk 'BEGIN {FS=OFS="/"}{print $NF}')-$(uname -m)$EXTENSION"
 echo "Building project for making: $OUT_FILE_NAME"
-go build -v -buildmode "$BUILD_MODE" -o "$OUT_FILE_NAME" $BUILD_TARGET
+#go build -v -buildmode "$BUILD_MODE" -o "$OUT_FILE_NAME" $BUILD_TARGET
+go build -v $BUILD_TARGET
