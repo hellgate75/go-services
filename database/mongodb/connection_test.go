@@ -11,16 +11,16 @@ import (
 func TestMongoConnection(t *testing.T) {
 	driver := GetMongoDriver()
 	conn, err := driver.Connect(database.DbConfig{
-		Host: "localhost",
-		Port: 27017,
-		Name: "root",
+		Host:     "localhost",
+		Port:     27017,
+		Name:     "root",
 		Password: "secret",
 	})
 	if err != nil {
 		t.Fatalf("Connection error occured: %v", err)
 	}
 	config := database.DataRef{
-		Database: "test",
+		Database:  "test",
 		Namespace: "sample",
 	}
 	err = conn.CreateDb(config)
@@ -33,23 +33,23 @@ func TestMongoConnection(t *testing.T) {
 	}
 	var values = make([]database.Value, 0)
 	values = append(values, database.Value{
-		Type: database.StructType,
+		Type: "struct",
 		Value: Data{
-			Code: uuid.New().String(),
-			Name: "Fabrizio",
+			Code:    uuid.New().String(),
+			Name:    "Fabrizio",
 			Surname: "Torelli",
-			Age: 45,
-			Role: "System Architect",
+			Age:     45,
+			Role:    "System Architect",
 		},
 	},
-	database.Value{
-			Type: database.StructType,
+		database.Value{
+			Type: "struct",
 			Value: Data{
-				Code: uuid.New().String(),
-				Name: "Francesco",
+				Code:    uuid.New().String(),
+				Name:    "Francesco",
 				Surname: "Torelli",
-				Age: 42,
-				Role: "Software Developer",
+				Age:     42,
+				Role:    "Software Developer",
 			},
 		})
 	err = conn.Insert(config, []database.Field{}, values)
@@ -60,19 +60,19 @@ func TestMongoConnection(t *testing.T) {
 	conditions = append(conditions, database.Condition{
 		Field: "name",
 		Value: database.Value{
-			Type: database.StructType,
+			Type:  "struct",
 			Value: "Francesco",
 		},
 	})
 	conditions = append(conditions, database.Condition{
 		Field: "surname",
 		Value: database.Value{
-			Type: database.StructType,
+			Type:  "struct",
 			Value: "Torelli",
 		},
 	})
 	var rs database.ResultSet
-	rs, err = conn.Query(config, []string{}, conditions)
+	rs, err = conn.Query(config, []string{}, conditions, false)
 	if err != nil {
 		t.Fatalf("Database collection querying error occured: %v\n", err)
 	}
@@ -86,8 +86,8 @@ func TestMongoConnection(t *testing.T) {
 	fmt.Printf("Value: %v\n", record)
 	fmt.Printf("Value set: %v\n", record.Values)
 	var count int64
-	var newValue = 	database.Value{
-		Type: database.StructType,
+	var newValue = database.Value{
+		Type: "struct",
 		Value: bson.D{{
 			"$set",
 			bson.D{{
@@ -96,7 +96,7 @@ func TestMongoConnection(t *testing.T) {
 			}},
 		}},
 	}
-	count, err = conn.Update(config, conditions, []database.Field{}, []database.Value{newValue})
+	count, err = conn.Update(config, conditions, []database.Field{}, []database.Value{newValue}, true)
 	fmt.Printf("Update: %v\n", count)
 	if err != nil {
 		t.Fatalf("Database collection update error occured: %v\n", err)
@@ -108,18 +108,18 @@ func TestMongoConnection(t *testing.T) {
 	conditions = append(conditions, database.Condition{
 		Field: "name",
 		Value: database.Value{
-			Type: database.StructType,
+			Type:  "struct",
 			Value: "Fabrizio",
 		},
 	})
 	conditions = append(conditions, database.Condition{
 		Field: "surname",
 		Value: database.Value{
-			Type: database.StructType,
+			Type:  "struct",
 			Value: "Torelli",
 		},
 	})
-	count, err = conn.Delete(config, conditions)
+	count, err = conn.Delete(config, conditions, true)
 	fmt.Printf("Delete: %v\n", count)
 	if err != nil {
 		t.Fatalf("Database collection delete record error occured: %v\n", err)

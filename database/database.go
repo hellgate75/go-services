@@ -1,12 +1,19 @@
 package database
 
-import "go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
+import (
+	"errors"
+	"fmt"
+	"github.com/hellgate75/go-services/database/mongodb"
+	"github.com/hellgate75/go-services/database/mysql"
+	"reflect"
+	"strings"
+)
 
 // Operation enumeration type
 type Operation byte
 
 // DataType enumeration type
-type DataType byte
+type DataType string
 
 // DriverType enumeration type
 type DriverType byte
@@ -16,42 +23,59 @@ const (
 	Equals Operation = iota + 1
 	// Less comparator Operation enumeration type
 	LessThan
+	// Less or Equals comparator Operation enumeration type
+	LessThanEquals
 	// Grater comparator Operation enumeration type
 	GraterThan
+	// Grater or Equals comparator Operation enumeration type
+	GraterThanEquals
 	// Similitude comparator Operation enumeration type
 	Like
 	// List items comparator Operation enumeration type
 	In
+	// En item is null
+	Null
 	// Negation comparator Operation enumeration type
 	Not Operation = 50
-	// String data type DataType enumeration type
-	StringType DataType = iota + 1
-	// Numeric data type DataType enumeration type
-	NumericType
-	// Decimal data type DataType enumeration type
-	DecimalType
-	// List data type DataType enumeration type
-	ListType
-	// Structure data type DataType enumeration type
-	StructType
 	// MongoDb DriverType enumeration type
 	MongoDbDriver DriverType = iota + 1
+	// MongoDb DriverType enumeration type
+	MySQLDriver
 )
+
+func driverToType(driver string) DriverType {
+	switch strings.ToLower(driver) {
+	case "mongo", "mongo-db", "mongodb":
+		return MongoDbDriver
+	case "mysql":
+		return MySQLDriver
+	default:
+		return DriverType(0)
+	}
+}
 
 //Database Configuration structure
 type DbConfig struct {
-	// MongoDb User name field
-	Name string
-	// MongoDb Password field
-	Password string
+	// Database name
+	Driver string `json:"driver,omitempty" yaml:"driver,omitempty" xml:"driver,omitempty"`
+	// Database name
+	Database DataRef `json:"dbRef,omitempty" yaml:"dbRef,omitempty" xml:"db-ref,omitempty"`
+	// Database url
+	Url string `json:"connectUrl,omitempty" yaml:"connectUrl,omitempty" xml:"connect-url,omitempty"`
+	// Database User name field
+	Name string `json:"userName,omitempty" yaml:"userName,omitempty" xml:"user-name,omitempty"`
+	// Database Password field
+	Password string `json:"userPassword,omitempty" yaml:"userPassword,omitempty" xml:"user-password,omitempty"`
+	// Database Password field
+	DbPassword string `json:"dbPassword,omitempty" yaml:"dbPassword,omitempty" xml:"db-password,omitempty"`
 	// MongoDb Certificate file path field
-	Certificate string
+	Certificate string `json:"certificateFile,omitempty" yaml:"certificateFile,omitempty" xml:"certificate-file,omitempty"`
 	// MongoDb Private Key file path field
-	PrivateKey string
+	PrivateKey string `json:"privateKey,omitempty" yaml:"privateKey,omitempty" xml:"private-key,omitempty"`
 	// MongoDb Host name field
-	Host string
+	Host string `json:"hostname,omitempty" yaml:"hostname,omitempty" xml:"hostname,omitempty"`
 	// MongoDb Port field
-	Port int
+	Port int `json:"port,omitempty" yaml:"port,omitempty" xml:"port,omitempty"`
 }
 
 // Field descriptor structure
@@ -84,20 +108,46 @@ type Condition struct {
 	Value Value
 }
 
+// Reference to a single ResultSet / Data Entity column
+type Column struct {
+	// Column name
+	Name string
+	// Column type
+	Type DataType
+	// Column type
+	GoType reflect.Type
+	// Columns size
+	Length int64
+	// Column numeric precision
+	Precision int64
+	// Column numeric precision
+	Scale int64
+}
+
+// Reference to ResultSet / Data Entity structure
+type MetaData struct {
+	// Name of table or data entity
+	EntityRef DataRef
+	// ResultSet / Data Entity Columns
+	Columns []Column
+}
+
 // Command Single Row Result descriptor structure
 type Result struct {
 	// Number of Columns
 	Columns int64
 	// Column Values
 	Values []interface{}
-	// Record Value
-	Document bsoncore.Document
+	// Record Raw Value Value
+	Document interface{}
 }
 
 // Result Set descriptor structure
 type ResultSet struct {
 	// Number of lines
 	Lines int64
+	// ResultSet / Data Entity metadata
+	MetaData MetaData
 	// Results Records
 	Records []Result
 }
@@ -110,18 +160,22 @@ type DataRef struct {
 	Namespace string
 	// Field Set Reference
 	FieldSetRef string
+	// Schema name
+	Schema string
+	// Data Query / Table SQL Reference
+	SQL string
 }
 
 // Connection interface
 type Connection interface {
 	// Execute Query on the database instance
-	Query(dbRef DataRef, fields []string, conditions []Condition) (ResultSet, error)
+	Query(dbRef DataRef, fields []string, conditions []Condition, withAnd bool) (ResultSet, error)
 	// Insert record on the database instance
 	Insert(dbRef DataRef, fields []Field, values []Value) error
 	// Update one or more records on the database instance
-	Update(dbRef DataRef, conditions []Condition, fields []Field, values []Value) (int64, error)
+	Update(dbRef DataRef, conditions []Condition, fields []Field, values []Value, withAnd bool) (int64, error)
 	// Delete one or more records on the database instance
-	Delete(dbRef DataRef, conditions []Condition) (int64, error)
+	Delete(dbRef DataRef, conditions []Condition, withAnd bool) (int64, error)
 	// Purge one or more records on the database instance
 	Purge(dbRef DataRef) (int64, error)
 	// Create Namespace, Collection or Entity element on the database instance
@@ -144,4 +198,18 @@ type Connection interface {
 type Driver interface {
 	// Connect to a database instance or database cluster instance
 	Connect(config DbConfig) (Connection, error)
+}
+
+func NewDatabase(config DbConfig) (*Driver, error) {
+	dType := driverToType(config.Driver)
+	switch dType {
+	case MongoDbDriver:
+		d := mongodb.GetMongoDriver()
+		return &d, nil
+	case MySQLDriver:
+		d := mysql.GetMySqlDriver()
+		return &d, nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Unknown driver: %s", config.Driver))
+	}
 }

@@ -11,33 +11,41 @@ import (
 )
 
 type mongoConnection struct {
-	Configuration	database.DbConfig
-	Client 			*mongo.Client
-	Context 		*context.Context
-	Valid			bool
-	Cancel			context.CancelFunc
-	err				error
+	Configuration database.DbConfig
+	Client        *mongo.Client
+	Context       *context.Context
+	Valid         bool
+	Cancel        context.CancelFunc
+	err           error
 }
 
-func (conn *mongoConnection) Query(dbRef database.DataRef, fields []string, conditions []database.Condition) (database.ResultSet, error) {
-	if ! conn.Valid || conn.Client == nil {
+func (conn *mongoConnection) Query(dbRef database.DataRef, fields []string, conditions []database.Condition, withAnd bool) (database.ResultSet, error) {
+	if !conn.Valid || conn.Client == nil {
 		return database.ResultSet{}, errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::Query %v", r))
 			conn.err = err
 		}
 	}()
+	var resultSet = database.ResultSet{
+		MetaData: database.MetaData{
+			Columns:   make([]database.Column, 0),
+			EntityRef: dbRef,
+		},
+		Records: make([]database.Result, 0),
+		Lines:   int64(0),
+	}
 	if conn.Context == nil {
-		err = errors.New("Mongo Context unavailable")
+		err = errors.New(fmt.Sprint("Mongo Context unavailable"))
 	} else {
 		var cursor *mongo.Cursor
 		var filter = make(bson.D, 0)
 		for _, cond := range conditions {
 			filter = append(filter, bson.E{
-				Key: cond.Field,
+				Key:   cond.Field,
 				Value: cond.Value.Value,
 			})
 		}
@@ -53,8 +61,9 @@ func (conn *mongoConnection) Query(dbRef database.DataRef, fields []string, cond
 			if err == nil {
 				records += 1
 				res := database.Result{
-					Columns: int64(len(values)),
-					Values: make([]interface{}, 0),
+					Document: raw,
+					Columns:  int64(len(values)),
+					Values:   make([]interface{}, 0),
 				}
 				for _, value := range values {
 					val := convertRawValue(value)
@@ -64,19 +73,18 @@ func (conn *mongoConnection) Query(dbRef database.DataRef, fields []string, cond
 			} else {
 				return database.ResultSet{}, err
 			}
-			return database.ResultSet{
-				Lines: int64(len(recordSet)),
-				Records: recordSet,
-			}, nil
+			resultSet.Lines = int64(len(recordSet))
+			resultSet.Records = recordSet
+			return resultSet, nil
 		}
 	}
-	return database.ResultSet{}, err
+	return resultSet, err
 }
 
 func convertRawValue(value bson.RawValue) interface{} {
 	switch value.Type {
 	case bsontype.Array:
-		arrRaw :=value.Array()
+		arrRaw := value.Array()
 		vals, errV := arrRaw.Values()
 		if errV != nil {
 			return nil
@@ -158,13 +166,13 @@ func convertRawValue(value bson.RawValue) interface{} {
 
 }
 
-func (conn *mongoConnection) Insert(dbRef database.DataRef, fields  []database.Field, values[]database.Value) error {
-	if ! conn.Valid || conn.Client == nil {
+func (conn *mongoConnection) Insert(dbRef database.DataRef, fields []database.Field, values []database.Value, withAnd bool) error {
+	if !conn.Valid || conn.Client == nil {
 		return errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::Insert %v", r))
 			conn.err = err
 		}
@@ -181,13 +189,13 @@ func (conn *mongoConnection) Insert(dbRef database.DataRef, fields  []database.F
 	return err
 }
 
-func (conn *mongoConnection) Update(dbRef database.DataRef, conditions []database.Condition, fields  []database.Field, values[]database.Value) (int64, error) {
-	if ! conn.Valid || conn.Client == nil {
+func (conn *mongoConnection) Update(dbRef database.DataRef, conditions []database.Condition, fields []database.Field, values []database.Value, withAnd bool) (int64, error) {
+	if !conn.Valid || conn.Client == nil {
 		return 0, errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::Update %v", r))
 			conn.err = err
 		}
@@ -198,7 +206,7 @@ func (conn *mongoConnection) Update(dbRef database.DataRef, conditions []databas
 		var filter = make(bson.D, 0)
 		for _, cond := range conditions {
 			filter = append(filter, bson.E{
-				Key: cond.Field,
+				Key:   cond.Field,
 				Value: cond.Value.Value,
 			})
 		}
@@ -217,12 +225,12 @@ func (conn *mongoConnection) Update(dbRef database.DataRef, conditions []databas
 }
 
 func (conn *mongoConnection) Delete(dbRef database.DataRef, conditions []database.Condition) (int64, error) {
-	if ! conn.Valid || conn.Client == nil {
+	if !conn.Valid || conn.Client == nil {
 		return 0, errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::Delete %v", r))
 			conn.err = err
 		}
@@ -233,7 +241,7 @@ func (conn *mongoConnection) Delete(dbRef database.DataRef, conditions []databas
 		var filter = make(bson.D, 0)
 		for _, cond := range conditions {
 			filter = append(filter, bson.E{
-				Key: cond.Field,
+				Key:   cond.Field,
 				Value: cond.Value.Value,
 			})
 		}
@@ -247,12 +255,12 @@ func (conn *mongoConnection) Delete(dbRef database.DataRef, conditions []databas
 }
 
 func (conn *mongoConnection) Purge(dbRef database.DataRef) (int64, error) {
-	if ! conn.Valid || conn.Client == nil {
+	if !conn.Valid || conn.Client == nil {
 		return 0, errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::Purge %v", r))
 			conn.err = err
 		}
@@ -270,12 +278,12 @@ func (conn *mongoConnection) Purge(dbRef database.DataRef) (int64, error) {
 }
 
 func (conn *mongoConnection) Create(dbRef database.DataRef, fields []database.Field) error {
-	if ! conn.Valid || conn.Client == nil {
+	if !conn.Valid || conn.Client == nil {
 		return errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::Create %v", r))
 			conn.err = err
 		}
@@ -288,7 +296,7 @@ func (conn *mongoConnection) Create(dbRef database.DataRef, fields []database.Fi
 		if db == nil {
 			return errors.New("Errors retriving databse")
 		} else {
-//			err = db.CreateCollection(*conn.Context, dbRef.Namespace)
+			//			err = db.CreateCollection(*conn.Context, dbRef.Namespace)
 			_ = db.Collection(dbRef.Namespace)
 			if err != nil {
 				collName := conn.Client.Database(dbRef.Database).Collection(dbRef.Namespace).Name()
@@ -299,12 +307,12 @@ func (conn *mongoConnection) Create(dbRef database.DataRef, fields []database.Fi
 	return err
 }
 func (conn *mongoConnection) CreateDb(dbRef database.DataRef) error {
-	if ! conn.Valid || conn.Client == nil {
+	if !conn.Valid || conn.Client == nil {
 		return errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::CreateDb %v", r))
 			conn.err = err
 		}
@@ -319,12 +327,12 @@ func (conn *mongoConnection) CreateDb(dbRef database.DataRef) error {
 }
 
 func (conn *mongoConnection) Drop(dbRef database.DataRef) error {
-	if ! conn.Valid || conn.Client == nil {
+	if !conn.Valid || conn.Client == nil {
 		return errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::Drop %v", r))
 			conn.err = err
 		}
@@ -343,12 +351,12 @@ func (conn *mongoConnection) Drop(dbRef database.DataRef) error {
 }
 
 func (conn *mongoConnection) DropDb(dbRef database.DataRef) error {
-	if ! conn.Valid || conn.Client == nil {
+	if !conn.Valid || conn.Client == nil {
 		return errors.New("Connection is closed or invalid")
 	}
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Connection::DropDb %v", r))
 			conn.err = err
 		}
@@ -371,8 +379,8 @@ func (conn *mongoConnection) GetLastError() error {
 
 func (conn *mongoConnection) Close() error {
 	var err error
-	defer func(){
-		if r:=recover(); r != nil {
+	defer func() {
+		if r := recover(); r != nil {
 			err = errors.New(fmt.Sprintf("Mongo-Driver::Disconnect %v", r))
 		}
 	}()
